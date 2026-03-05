@@ -1,6 +1,7 @@
 package com.hdev.apikeymanager.service;
 
 
+import com.hdev.apikeymanager.dto.ApiKeyResponse;
 import com.hdev.apikeymanager.dto.CreateApiKeyRequest;
 import com.hdev.apikeymanager.dto.CreateApiKeyResponse;
 import com.hdev.apikeymanager.entity.ApiKey;
@@ -13,6 +14,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -57,4 +59,36 @@ public class ApiKeyService {
                 .expiryDate(apiKey.getExpiryDate().toString())
                 .build();
     }
+
+    public List<ApiKeyResponse> getUserKeys(String email) {
+
+        List<ApiKey> keys = apiKeyRepository.findByUserEmail(email);
+
+        return keys.stream()
+                .map(key -> ApiKeyResponse.builder()
+                        .id(key.getId())
+                        .rateLimitPerMinute(key.getRateLimitPerMinute())
+                        .monthlyQuota(key.getMonthlyQuota())
+                        .currentMonthUsage(key.getCurrentMonthUsage())
+                        .active(key.isActive())
+                        .expiryDate(key.getExpiryDate().toString())
+                        .createdAt(key.getCreatedAt().toString())
+                        .build())
+                .toList();
+    }
+
+    public void revokeKey(Long keyId, String email) {
+
+        ApiKey key = apiKeyRepository.findById(keyId)
+                .orElseThrow(() -> new RuntimeException("API key not found"));
+
+        if (!key.getUser().getEmail().equals(email)) {
+            throw new RuntimeException("You do not own this API key");
+        }
+
+        key.setActive(false);
+
+        apiKeyRepository.save(key);
+    }
+
 }
