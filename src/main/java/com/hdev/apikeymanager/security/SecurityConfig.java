@@ -2,6 +2,7 @@ package com.hdev.apikeymanager.security;
 
 import com.hdev.apikeymanager.repository.ApiKeyRepository;
 import com.hdev.apikeymanager.repository.ApiUsageLogRepository;
+import com.hdev.apikeymanager.service.ApiKeyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ public class SecurityConfig {
 
     private final ApiKeyRepository apiKeyRepository;
     private final ApiUsageLogRepository usageRepository;
+    private final ApiKeyService apiKeyService;
     private final JwtUtil jwtUtil;
 
     @Bean
@@ -24,7 +26,11 @@ public class SecurityConfig {
                 new JwtAuthenticationFilter(jwtUtil);
 
         ApiKeyAuthenticationFilter apiKeyFilter =
-                new ApiKeyAuthenticationFilter(apiKeyRepository, usageRepository);
+                new ApiKeyAuthenticationFilter(
+                        apiKeyRepository,
+                        usageRepository,
+                        apiKeyService
+                );
 
         http
                 .csrf(csrf -> csrf.disable())
@@ -34,10 +40,10 @@ public class SecurityConfig {
                         .anyRequest().permitAll()
                 )
 
-                // JWT must run first
+                // JWT filter first
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
-                // API key validation runs after JWT
+                // API key filter after JWT
                 .addFilterAfter(apiKeyFilter, JwtAuthenticationFilter.class);
 
         return http.build();

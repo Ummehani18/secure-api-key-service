@@ -9,6 +9,7 @@ import com.hdev.apikeymanager.entity.User;
 import com.hdev.apikeymanager.repository.ApiKeyRepository;
 import com.hdev.apikeymanager.repository.UserRepository;
 import com.hdev.apikeymanager.security.ApiKeyGenerator;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
@@ -89,6 +90,14 @@ public class ApiKeyService {
         key.setActive(false);
 
         apiKeyRepository.save(key);
+    }
+
+    @Transactional
+    public void incrementUsage(ApiKey apiKey) {
+
+        apiKey.setCurrentMonthUsage(apiKey.getCurrentMonthUsage() + 1);
+
+        apiKeyRepository.save(apiKey);
     }
 
 }

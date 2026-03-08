@@ -4,11 +4,13 @@ import com.hdev.apikeymanager.entity.ApiKey;
 import com.hdev.apikeymanager.entity.ApiUsageLog;
 import com.hdev.apikeymanager.repository.ApiKeyRepository;
 import com.hdev.apikeymanager.repository.ApiUsageLogRepository;
+import com.hdev.apikeymanager.service.ApiKeyService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,11 +21,13 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
 
+@Slf4j
 @RequiredArgsConstructor
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     private final ApiKeyRepository apiKeyRepository;
     private final ApiUsageLogRepository usageRepository;
+    private final ApiKeyService apiKeyService;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -59,6 +63,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
         ApiKey apiKey = optionalKey.get();
 
+        log.info("API Key ID: {}", apiKey.getId());
+
         if (!apiKey.isActive()) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "API Key revoked");
             return;
@@ -74,21 +80,22 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 LocalDateTime.now().minusMinutes(1)
         );
 
+        log.info("Requests in last minute: {}", requestCount);
+/*
         if (apiKey.getRateLimitPerMinute() > 0 &&
                 requestCount >= apiKey.getRateLimitPerMinute()) {
 
             response.sendError(429, "Rate limit exceeded");
             return;
         }
-
+*/
         if (apiKey.getCurrentMonthUsage() >= apiKey.getMonthlyQuota()) {
             response.sendError(429, "Monthly quota exceeded");
             return;
         }
 
-        // 🔴 INCREMENT USAGE HERE
-        apiKey.setCurrentMonthUsage(apiKey.getCurrentMonthUsage() + 1);
-        apiKeyRepository.save(apiKey);
+        // increment usage safely (transactional service)
+        apiKeyService.incrementUsage(apiKey);
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
@@ -99,16 +106,15 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        ApiUsageLog log = ApiUsageLog.builder()
+        ApiUsageLog logEntry = ApiUsageLog.builder()
                 .apiKey(apiKey)
                 .requestTime(LocalDateTime.now())
                 .endpoint(request.getRequestURI())
                 .statusCode(200)
                 .build();
 
-        usageRepository.save(log);
+        usageRepository.save(logEntry);
 
         filterChain.doFilter(request, response);
     }
 }
-

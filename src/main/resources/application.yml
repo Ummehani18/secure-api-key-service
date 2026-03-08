@@ -14,7 +14,11 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
 server:
-  port: 8080
+  port: 8081
+  tomcat:
+    threads:
+      max: 200
+    accept-count: 100
 
 logging:
   level:
