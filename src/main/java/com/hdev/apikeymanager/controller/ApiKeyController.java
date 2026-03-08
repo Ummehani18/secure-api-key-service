@@ -21,9 +21,8 @@ public class ApiKeyController {
     private final ApiKeyService apiKeyService;
 
     @PostMapping
-    public CreateApiKeyResponse createKey(@Valid @RequestBody CreateApiKeyRequest request) {
+    public CreateApiKeyResponse createKey(Authentication authentication, @Valid @RequestBody CreateApiKeyRequest request) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
 
         return apiKeyService.createKey(email, request);

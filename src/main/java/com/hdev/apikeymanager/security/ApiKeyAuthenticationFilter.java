@@ -1,7 +1,9 @@
 package com.hdev.apikeymanager.security;
 
 import com.hdev.apikeymanager.entity.ApiKey;
+import com.hdev.apikeymanager.entity.ApiUsageLog;
 import com.hdev.apikeymanager.repository.ApiKeyRepository;
+import com.hdev.apikeymanager.repository.ApiUsageLogRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,20 +23,23 @@ import java.util.Optional;
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     private final ApiKeyRepository apiKeyRepository;
+    private final ApiUsageLogRepository usageRepository;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+
+        String path = request.getRequestURI();
+
+        return path.startsWith("/api/auth")
+                || path.startsWith("/api/keys")
+                || path.equals("/health");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
-
-        String path = request.getRequestURI();
-
-        // Skip auth endpoints
-        if (path.startsWith("/api/auth") || path.startsWith("/api/keys")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
         String apiKeyHeader = request.getHeader("X-API-KEY");
 
@@ -64,6 +69,18 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        long requestCount = usageRepository.countByApiKeyIdAndRequestTimeAfter(
+                apiKey.getId(),
+                LocalDateTime.now().minusMinutes(1)
+        );
+
+        if (apiKey.getRateLimitPerMinute() > 0 &&
+                requestCount >= apiKey.getRateLimitPerMinute()) {
+
+            response.sendError(429, "Rate limit exceeded");
+            return;
+        }
+
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         apiKey.getUser().getEmail(),
@@ -73,10 +90,16 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
+        ApiUsageLog log = ApiUsageLog.builder()
+                .apiKey(apiKey)
+                .requestTime(LocalDateTime.now())
+                .endpoint(request.getRequestURI())
+                .statusCode(200)
+                .build();
+
+        usageRepository.save(log);
+
         filterChain.doFilter(request, response);
     }
-
-
-
 }
 
