@@ -81,6 +81,15 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        if (apiKey.getCurrentMonthUsage() >= apiKey.getMonthlyQuota()) {
+            response.sendError(429, "Monthly quota exceeded");
+            return;
+        }
+
+        // 🔴 INCREMENT USAGE HERE
+        apiKey.setCurrentMonthUsage(apiKey.getCurrentMonthUsage() + 1);
+        apiKeyRepository.save(apiKey);
+
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         apiKey.getUser().getEmail(),
