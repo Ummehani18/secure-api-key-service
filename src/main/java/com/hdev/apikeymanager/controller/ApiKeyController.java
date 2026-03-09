@@ -1,16 +1,15 @@
 package com.hdev.apikeymanager.controller;
 
-import com.hdev.apikeymanager.dto.ApiKeyResponse;
-import com.hdev.apikeymanager.dto.CreateApiKeyRequest;
-import com.hdev.apikeymanager.dto.CreateApiKeyResponse;
+import com.hdev.apikeymanager.dto.*;
 import com.hdev.apikeymanager.service.ApiKeyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -20,26 +19,55 @@ public class ApiKeyController {
 
     private final ApiKeyService apiKeyService;
 
+
+    // CREATE API KEY
     @PostMapping
-    public CreateApiKeyResponse createKey(Authentication authentication, @Valid @RequestBody CreateApiKeyRequest request) {
+    public ApiResponse<CreateApiKeyResponse> createKey(
+            Authentication authentication,
+            @Valid @RequestBody CreateApiKeyRequest request) {
 
         String email = authentication.getName();
 
-        return apiKeyService.createKey(email, request);
+        CreateApiKeyResponse response = apiKeyService.createKey(email, request);
+
+        return ApiResponse.<CreateApiKeyResponse>builder()
+                .timestamp(LocalDateTime.now().toString())
+                .status(HttpStatus.CREATED.value())
+                .message("API key created successfully")
+                .data(response)
+                .build();
     }
 
+
+    // LIST USER API KEYS
     @GetMapping
-    public List<ApiKeyResponse> listKeys(@AuthenticationPrincipal String email) {
-        return apiKeyService.getUserKeys(email);
+    public ApiResponse<List<ApiKeyResponse>> listKeys(
+            @AuthenticationPrincipal String email) {
+
+        List<ApiKeyResponse> keys = apiKeyService.getUserKeys(email);
+
+        return ApiResponse.<List<ApiKeyResponse>>builder()
+                .timestamp(LocalDateTime.now().toString())
+                .status(HttpStatus.OK.value())
+                .message("API keys retrieved successfully")
+                .data(keys)
+                .build();
     }
 
+
+    // REVOKE API KEY
     @DeleteMapping("/{id}")
-    public String revokeKey(
+    public ApiResponse<String> revokeKey(
             @PathVariable Long id,
             @AuthenticationPrincipal String email) {
 
         apiKeyService.revokeKey(id, email);
 
-        return "API key revoked successfully";
+        return ApiResponse.<String>builder()
+                .timestamp(LocalDateTime.now().toString())
+                .status(HttpStatus.OK.value())
+                .message("API key revoked successfully")
+                .data(null)
+                .build();
     }
 }

@@ -1,17 +1,23 @@
 package com.hdev.apikeymanager.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.hdev.apikeymanager.dto.ApiResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/data")
 public class DataController {
 
-        @GetMapping
-        public String getData() {
-            return "Protected API accessed successfully";
-        }
+    @GetMapping
+    public ApiResponse<String> getData() {
 
-
+        return ApiResponse.<String>builder()
+                .timestamp(LocalDateTime.now().toString())
+                .status(HttpStatus.OK.value())
+                .message("Protected data retrieved successfully")
+                .data("Protected API accessed successfully")
+                .build();
+    }
 }
