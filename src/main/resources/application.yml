@@ -26,6 +26,6 @@ logging:
     org.springframework: INFO
 
 jwt:
-  secret: MyStrongJwtSecretKeyForDevEnvironmentOnly123456!
+  secret: ${JWT_SECRET}
   expiration: 3600000
 
