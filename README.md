@@ -119,6 +119,9 @@ Swagger API docs:
 http://localhost:8081/swagger-ui/index.html
 ```
 
+<img width="1143" height="731" alt="image" src="https://github.com/user-attachments/assets/4713039f-56f6-404a-9eb1-addbff598c0f" />
+
+
 ---
 
 # ☁️ Cloud Deployment (AWS EC2)
