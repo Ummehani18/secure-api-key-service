@@ -8,13 +8,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.hdev.apikeymanager.dto.ApiResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/keys")
 @RequiredArgsConstructor
+@Tag(name = "API Key Management", description = "Create, list and revoke API keys")
+
 public class ApiKeyController {
 
     private final ApiKeyService apiKeyService;

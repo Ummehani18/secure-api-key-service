@@ -29,6 +29,9 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     private final ApiUsageLogRepository usageRepository;
     private final ApiKeyService apiKeyService;
 
+    /**
+     * Filter should run ONLY for API access endpoints
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
 
@@ -36,7 +39,10 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
         return path.startsWith("/api/auth")
                 || path.startsWith("/api/keys")
-                || path.equals("/health");
+                || path.startsWith("/api/health")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui.html");
     }
 
     @Override
@@ -47,7 +53,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
         String apiKeyHeader = request.getHeader("X-API-KEY");
 
-        if (apiKeyHeader == null) {
+        if (apiKeyHeader == null || apiKeyHeader.isBlank()) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "API Key required");
             return;
         }
@@ -81,20 +87,22 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         );
 
         log.info("Requests in last minute: {}", requestCount);
-/*
+
+        /*
         if (apiKey.getRateLimitPerMinute() > 0 &&
                 requestCount >= apiKey.getRateLimitPerMinute()) {
 
             response.sendError(429, "Rate limit exceeded");
             return;
         }
-*/
+        */
+
         if (apiKey.getCurrentMonthUsage() >= apiKey.getMonthlyQuota()) {
             response.sendError(429, "Monthly quota exceeded");
             return;
         }
 
-        // increment usage safely (transactional service)
+        // Increment usage safely
         apiKeyService.incrementUsage(apiKey);
 
         UsernamePasswordAuthenticationToken authentication =

@@ -2,16 +2,21 @@ package com.hdev.apikeymanager.controller;
 
 import com.hdev.apikeymanager.dto.*;
 import com.hdev.apikeymanager.service.UserService;
+import com.hdev.apikeymanager.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication APIs", description = "User registration and login APIs")
+
 public class AuthController {
 
     private final UserService userService;

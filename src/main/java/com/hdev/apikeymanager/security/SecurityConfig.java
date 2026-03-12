@@ -36,8 +36,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/health").permitAll()
-                        .anyRequest().permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/health",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
 
                 // JWT filter first

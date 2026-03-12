@@ -1,6 +1,5 @@
 package com.hdev.apikeymanager.service;
 
-
 import com.hdev.apikeymanager.dto.ApiKeyResponse;
 import com.hdev.apikeymanager.dto.CreateApiKeyRequest;
 import com.hdev.apikeymanager.dto.CreateApiKeyResponse;
@@ -11,6 +10,7 @@ import com.hdev.apikeymanager.repository.UserRepository;
 import com.hdev.apikeymanager.security.ApiKeyGenerator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +19,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ApiKeyService {
 
     private final ApiKeyRepository apiKeyRepository;
@@ -27,17 +28,17 @@ public class ApiKeyService {
 
     public CreateApiKeyResponse createKey(String userEmail, CreateApiKeyRequest request) {
 
-        // 1️⃣ Get user
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2️⃣ Generate secure random key
-        String plainKey = apiKeyGenerator.generateKey();
+        // basic validation
+        if (request.getRateLimitPerMinute() <= 0 || request.getMonthlyQuota() <= 0) {
+            throw new RuntimeException("Invalid API key configuration");
+        }
 
-        // 3️⃣ Hash the key
+        String plainKey = apiKeyGenerator.generateKey();
         String hashedKey = DigestUtils.sha256Hex(plainKey);
 
-        // 4️⃣ Create ApiKey entity
         ApiKey apiKey = ApiKey.builder()
                 .hashedKey(hashedKey)
                 .rateLimitPerMinute(request.getRateLimitPerMinute())
@@ -49,10 +50,10 @@ public class ApiKeyService {
                 .user(user)
                 .build();
 
-        // 5️⃣ Save hashed key
         apiKeyRepository.save(apiKey);
 
-        // 6️⃣ Return plain key only once
+        log.info("API key created for user {}", userEmail);
+
         return CreateApiKeyResponse.builder()
                 .apiKey(plainKey)
                 .rateLimitPerMinute(apiKey.getRateLimitPerMinute())
@@ -84,12 +85,14 @@ public class ApiKeyService {
                 .orElseThrow(() -> new RuntimeException("API key not found"));
 
         if (!key.getUser().getEmail().equals(email)) {
+            log.warn("Unauthorized API key revoke attempt by {}", email);
             throw new RuntimeException("You do not own this API key");
         }
 
         key.setActive(false);
-
         apiKeyRepository.save(key);
+
+        log.info("API key {} revoked by user {}", keyId, email);
     }
 
     @Transactional
@@ -98,6 +101,7 @@ public class ApiKeyService {
         apiKey.setCurrentMonthUsage(apiKey.getCurrentMonthUsage() + 1);
 
         apiKeyRepository.save(apiKey);
-    }
 
+        log.debug("API key {} usage incremented", apiKey.getId());
+    }
 }

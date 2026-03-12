@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/apikeydb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/apikey_db}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
@@ -14,7 +14,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
 server:
-  port: 8081
+  port: 8082
   tomcat:
     threads:
       max: 200
